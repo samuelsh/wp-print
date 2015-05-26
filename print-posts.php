@@ -77,10 +77,10 @@ if($cat){
 	'cat' => $cat,
 	'post__in' => $post_ids,
 	'posts_per_page' => -1,
-	'order' => DESC
+	'order' => 'DESC'
 	);
 
-	$wp_query = new WP_Query($args); //BB Dev: creating new WP loop for outputing posts we just selected usin manual params
+	$wp_query = new WP_Query($args); //BB Dev: creating new WP loop for outputing posts we just selected using manual params
 }
 ?>
 

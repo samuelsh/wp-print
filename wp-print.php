@@ -431,6 +431,7 @@ function print_activation( $network_wide )
 		, 'links'       => 1
 		, 'images'      => 1
 		, 'videos'      => 0
+		, 'cats'		=> 0
 		, 'disclaimer'  => sprintf(__('Copyright &copy; %s %s. All rights reserved.', 'wp-print'), date('Y'), get_option('blogname'))
 	);
 
@@ -455,8 +456,46 @@ function print_activation( $network_wide )
 		add_option( $option_name, $option );
 		print_activate();
 	}
+	
+	init_WPFS() || wp_die(new WP_Error(1001,"Fatal Error - Failed to init Wordpress FS"), "", array('back_link' => true));
 }
 
 function print_activate() {
 	flush_rewrite_rules();
+}
+
+
+// BB Dev -- Working with Worpdress FS 
+function init_WPFS() {
+	
+	$access_type = get_filesystem_method();
+	if($access_type === 'direct')
+	{
+		/* you can safely run request_filesystem_credentials() without any issues and don't need to worry about passing in a URL */
+		$creds = request_filesystem_credentials(site_url() . '/wp-admin/', '', false, false, array());
+	
+		/* initialize the API */
+		if ( ! WP_Filesystem($creds) ) {
+			/* any problems and we exit */
+			return false;
+		}
+	
+		global $wp_filesystem;
+		/* do our file manipulations below */
+	}
+	
+	else
+	{
+		/* don't have direct write access. Prompt user with our notice */
+		add_action('admin_notice', 'WPFS_error_notice');
+	}
+	
+	return true;
+}
+
+
+function WPFS_error_notice() {
+	$class = "error";
+	$message = plugin_basename(__FILE__)." don't have direct access permissions. Please fix it.";
+	echo"<div class=\"$class\"> <p>$message</p></div>";
 }
