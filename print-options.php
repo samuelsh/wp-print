@@ -21,7 +21,8 @@ if(!empty($_POST['Submit'])) {
 	$print_options['links'] = intval($_POST['print_links']);
 	$print_options['images'] = intval($_POST['print_images']);
 	$print_options['videos'] = intval($_POST['print_videos']);
-	$print_options['cats'] = intval($_POST['print_cats']); //BB Dev
+	$print_options['cats'] = intval($_POST['print_cats']); // BB Dev
+	$print_options['exclude_posts'] = trim($_POST['exclude_posts']); // BB Dev
 	$print_options['disclaimer'] = trim($_POST['print_disclaimer']);
 	$update_print_queries = array();
 	$update_print_text = array();
@@ -182,6 +183,12 @@ if(!empty($_POST['Submit'])) {
 					<option value="0"<?php selected('0', $print_options['cats']); ?>><?php _e('No', 'wp-print'); ?></option>
 				</select>
 			</td> 
+		</tr>	
+		<tr>
+			<th scope="row" valign="top"><?php _e('Exclude post by title (comma separated)', 'wp-print'); ?></th>
+			<td>
+				<input type="text" name="exclude_posts" value="<?php echo $print_options['exclude_posts']; ?>" size="30" />
+			</td>
 		</tr>	<!-- BB Dev end-->
 		<tr> 
 			<th scope="row" valign="top">				

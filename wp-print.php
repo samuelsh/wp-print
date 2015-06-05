@@ -28,6 +28,10 @@ Text Domain: wp-print
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
+// BB Dev staring new session
+if (!session_id()) {
+	session_start();
+}
 
 ### Create Text Domain For Translations
 add_action( 'plugins_loaded', 'print_textdomain' );
@@ -422,17 +426,19 @@ function print_activation( $network_wide )
 	// Add Options
 	$option_name = 'print_options';
 	$option = array(
-		  'post_text'   => __('Print This Post', 'wp-print')
-		, 'page_text'   => __('Print This Page', 'wp-print')
-		, 'print_icon'  => 'print.gif'
-		, 'print_style' => 1
-		, 'print_html'  => '<a href="%PRINT_URL%" rel="nofollow" title="%PRINT_TEXT%">%PRINT_TEXT%</a>'
-		, 'comments'    => 0
-		, 'links'       => 1
-		, 'images'      => 1
-		, 'videos'      => 0
-		, 'cats'		=> 0
+		  'post_text'     => __('Print This Post', 'wp-print')
+		, 'page_text'     => __('Print This Page', 'wp-print')
+		, 'print_icon'    => 'print.gif'
+		, 'print_style'   => 1
+		, 'print_html'    => '<a href="%PRINT_URL%" rel="nofollow" title="%PRINT_TEXT%">%PRINT_TEXT%</a>'
+		, 'comments'      => 0
+		, 'links'         => 1
+		, 'images'        => 1
+		, 'videos'        => 0
+		, 'cats'		  => 0
+		, 'exclude_posts' => ''
 		, 'disclaimer'  => sprintf(__('Copyright &copy; %s %s. All rights reserved.', 'wp-print'), date('Y'), get_option('blogname'))
+		, 'export' 		=> 'disk'
 	);
 
 	if ( is_multisite() && $network_wide )
@@ -457,7 +463,8 @@ function print_activation( $network_wide )
 		print_activate();
 	}
 	
-	init_WPFS() || wp_die(new WP_Error(1001,"Fatal Error - Failed to init Wordpress FS"), "", array('back_link' => true));
+//	test_WPFS() || wp_die(new WP_Error(1001,"Fatal Error - Failed to init Wordpress FS"), "", array('back_link' => true));
+	
 }
 
 function print_activate() {
@@ -466,36 +473,38 @@ function print_activate() {
 
 
 // BB Dev -- Working with Worpdress FS 
+
 function init_WPFS() {
-	
 	$access_type = get_filesystem_method();
-	if($access_type === 'direct')
-	{
-		/* you can safely run request_filesystem_credentials() without any issues and don't need to worry about passing in a URL */
-		$creds = request_filesystem_credentials(site_url() . '/wp-admin/', '', false, false, array());
+    
+	/* you can safely run request_filesystem_credentials() without any issues and don't need to worry about passing in a URL */
+	$creds = request_filesystem_credentials(site_url() . '/wp-admin/', '', false, false, array());
 	
-		/* initialize the API */
-		if ( ! WP_Filesystem($creds) ) {
-			/* any problems and we exit */
-			return false;
-		}
-	
-		global $wp_filesystem;
-		/* do our file manipulations below */
+	/* initialize the API */
+	if ( ! WP_Filesystem($creds) ) {
+		/* any problems and we exit */
+		
+        echo "<div class=\"error\"> <p>Failed to init WPFS. Failback to RAM</p></div>";
 	}
-	
-	else
-	{
-		/* don't have direct write access. Prompt user with our notice */
-		add_action('admin_notice', 'WPFS_error_notice');
-	}
-	
-	return true;
+    
+	global $wp_filesystem;
+    	
+	echo "<div class=\"updated notice is-dismissible\"> <p>FS access type is $access_type</p></div>";
+	if ($access_type != 'direct')
+            echo "<div class=\"error\"> <p>Failed to get direct access to FS</p></div>";
+		
+    /* do our file manipulations below */
+    if(!$wp_filesystem->exists(wp_upload_dir()['basedir']."/test.html")) {
+    	if($wp_filesystem->touch(wp_upload_dir()['basedir']."/test.html"))
+        	echo "<div class=\"updated notice is-dismissible\"><p>Export file is successfully created</p></div>";
+    }
+    else
+    	echo "<div class=\"updated notice is-dismissible\"><p>Export file exists</p></div>";
 }
 
-
-function WPFS_error_notice() {
-	$class = "error";
-	$message = plugin_basename(__FILE__)." don't have direct access permissions. Please fix it.";
-	echo"<div class=\"$class\"> <p>$message</p></div>";
-}
+// BB Dev - will init WordpressFS here
+function after_wp_loaded() {
+	
+    add_action('admin_notices', 'init_WPFS');
+}	
+add_action('wp_loaded', 'after_wp_loaded');

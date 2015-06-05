@@ -15,7 +15,7 @@
 global $wp_query;
 global $wpdb;
 
-$cat=$_GET["cat"];		// BB Dev: getting categry ID from URL
+$cat=isset($_GET["cat"]) ? $_GET['cat']:"";		// BB Dev: getting categry ID from URL
 ?>
 
 <?php global $text_direction; ?>
@@ -42,83 +42,234 @@ $cat=$_GET["cat"];		// BB Dev: getting categry ID from URL
 <body>
 
 <?php // ----------------------------------BB Dev---------------------------------------------------------------------
-if($cat){
-    // BB Develop: Get all posts with given special post type
+if($cat): 
+    // BB Dev: Get all posts with given special post type
+	$offset = 0;
+	$excluded_posts = explode(",", $print_options['exclude_posts']);
+	$excluded_posts = implode("|", $excluded_posts);
+	$postsInCat = get_term_by('name',get_cat_name($cat),'category'); // getting # of posts in category
+	$posts_num = $postsInCat->count;
+	$cat_name = get_cat_name($cat);
+	echo $posts_num;
+	
 	$sql = "
-		SELECT wposts.* 
-		FROM $wpdb->posts wposts
-		WHERE wposts.post_title not like '%Вечерний урок Зоар%'
-		AND wposts.post_title not like '%Утренний урок%'
-		AND wposts.post_title not like '%Детский урок%'
-		AND wposts.post_title not like '%Вы думали, каббала - это сложно%'
-		AND wposts.post_title not like '%Беседа о социальной сети%'
-		AND wposts.post_title not like '%Урок по письму Рабаша%'
-		AND wposts.post_title not like '%Урок по Талмуду Десяти Сфирот%'
-		AND wposts.post_title not like '%Урок по письму Бааль Сулама%'
-		AND wposts.post_title not like '%Урок Зоар по недельной главе%'
-		AND wposts.post_title not like '%Урок по статьям Бааль Сулама%'		
-		AND wposts.post_status = 'publish' 
-		AND wposts.post_type = 'post' 
-		ORDER BY wposts.post_date DESC
-	";
-
-	$posts_in_category = $wpdb->get_results($sql); 
+		SELECT * 
+		FROM $wpdb->posts
+		LEFT JOIN $wpdb->term_relationships ON($wpdb->posts.ID = $wpdb->term_relationships.object_id)
+		LEFT JOIN $wpdb->term_taxonomy ON($wpdb->term_relationships.term_taxonomy_id = $wpdb->term_taxonomy.term_taxonomy_id)
+		LEFT JOIN $wpdb->terms ON($wpdb->term_taxonomy.term_id = $wpdb->terms.term_id)
+		WHERE post_status = 'publish'
+		AND $wpdb->terms.name = '".$cat_name."'
+		AND $wpdb->term_taxonomy.taxonomy = 'category'
+		AND post_type = 'post' 
+ 		AND post_title not regexp '".$excluded_posts."'
+		ORDER BY post_date DESC LIMIT 100 OFFSET $offset
+		";
 	
-	$post_ids = array(); //BB Dev: creating array of post IDs for WP query
-	foreach ($posts_in_category as $one_post){
-		array_push($post_ids, $one_post->ID);
-	}
+	$posts_in_category = $wpdb->get_results($sql, OBJECT);
+	?>
 
-	  
-	
-	$temp = $wp_query;
-	$wp_query= null;
-	$args = array (
-	'cat' => $cat,
-	'post__in' => $post_ids,
-	'posts_per_page' => -1,
-	'order' => 'DESC'
-	);
+<main role="main" class="center">
 
-	$wp_query = new WP_Query($args); //BB Dev: creating new WP loop for outputing posts we just selected using manual params
-}
-?>
+			<span class="hat">
+				<strong>
+					- <?php bloginfo('name'); ?> 
+					- 
+					<span dir="ltr"><?php bloginfo('url')?></span> 
+					-
+				</strong>
+<p style="text-align: center;"><strong> - <span dir="ltr"><?php echo(get_the_category_by_ID($cat)) ?></span> -</strong></p>
+			</span>
+<?php while ($posts_in_category): ?>
+		<?php if ($posts_in_category): ?>
+			<?php global $post; ?>
+			<?php foreach ($posts_in_category as $post): ?>
+				<?php setup_postdata($post); ?>
+			
+			<header class="entry-header">
+				<h1 class="entry-title">
+					<?php the_title(); ?>
+				</h1>
 
-<p style="text-align: center;"><strong>- <?php bloginfo('name'); ?> - <span dir="ltr"><?php bloginfo('url')?></span> -</strong></p>
-<?php if($cat): // BB Dev -->?> 
-	 <p style="text-align: center;"><strong>- <span dir="ltr"><?php echo(get_the_category_by_ID($cat)) ?></span> -</strong></p>
-<?php endif; // BB Dev <--?>
-<div class="Center">
-	<div id="Outline">
-		<?php if ($wp_query->have_posts()): ?>
-			<?php while ($wp_query->have_posts()): $wp_query->the_post(); ?>
-					<?php if($cat): //BB Dev: if category - print post title with link ?>
-						 <p id="BlogTitle"><a href="<?php the_permalink() ?>"><?php the_title(); ?></a></p>
-					<?php else: ?>
-					<p id="BlogTitle"><?php the_title(); ?></p>
-					<?php endif; //BB Dev?>
-					<p id="BlogDate"><?php _e('Posted By', 'wp-print'); ?> <u><?php the_author(); ?></u> <?php _e('On', 'wp-print'); ?> <?php the_time(sprintf(__('%s @ %s', 'wp-print'), get_option('date_format'), get_option('time_format'))); ?> <?php _e('In', 'wp-print'); ?> <?php print_categories('<u>', '</u>'); ?> | <u><a href='#comments_controls'><?php print_comments_number(); ?></a></u></p>
-					<div id="BlogContent"><?php print_content(); ?></div>
-			<?php endwhile; ?>
-			<hr class="Divider" style="text-align: center;" />
-			<?php if(print_can('comments')): ?>
-				<?php comments_template(); ?>
-			<?php endif; ?>
-			<p><?php _e('Article printed from', 'wp-print'); ?> <?php bloginfo('name'); ?>: <strong dir="ltr"><?php bloginfo('url'); ?></strong></p>
-			<?php if($cat): //BB Dev -->?>
-				<p><?php _e('URL to category', 'wp-print'); ?>: <strong dir="ltr"><?php echo (get_category_link($cat)); ?></strong></p>			
-			<?php else: ?>
-				<p><?php _e('URL to article', 'wp-print'); ?>: <strong dir="ltr"><?php the_permalink(); ?></strong></p>
-			<?php endif; // BB Dev <--?>
-			<?php if(print_can('links')): ?>
-				<p><?php print_links(); ?></p>
-			<?php endif; ?>
-			<p style="text-align: <?php echo ('rtl' == $text_direction) ? 'left' : 'right'; ?>;" id="print-link"><?php _e('Click', 'wp-print'); ?> <a href="#Print" onclick="window.print(); return false;" title="<?php _e('Click here to print.', 'wp-print'); ?>"><?php _e('here', 'wp-print'); ?></a> <?php _e('to print.', 'wp-print'); ?></p>
+				<span class="entry-date">
+
+				<?php _e('Posted By', 'wp-print'); ?> 
+
+				<cite><?php the_author(); ?></cite> 
+
+				<?php _e('On', 'wp-print'); ?> 
+
+				<time>	
+					<?php the_time(sprintf(__('%s @ %s', 'wp-print'), 
+						get_option('date_format'), 
+						get_option('time_format'))); 
+					?> 
+				</time>
+
+			  	<span>
+			  		<?php _e('In', 'wp-print'); ?> 
+			  		<?php print_categories(); ?> | 
+			  	</span>	
+
+		  		<a href='#comments_controls'>
+		  			<?php print_comments_number(); ?>
+	  			</a>	  			
+
+				</span>
+			
+			</header>	
+
+			<div class="entry-content">
+
+				<?php print_content(); ?>
+
+			</div>
+						
+			<?php endforeach; ?>
 		<?php else: ?>
 				<p><?php _e('No posts matched your criteria.', 'wp-print'); ?></p>
-		<?php endif; $wp_query = $temp; //BB Dev: restoring original WP query?>
+		<?php endif; ?>
 	</div>
 </div>
+<?php $offset += 100; 
+
+	$sql = "
+		SELECT * 
+		FROM $wpdb->posts
+		LEFT JOIN $wpdb->term_relationships ON($wpdb->posts.ID = $wpdb->term_relationships.object_id)
+		LEFT JOIN $wpdb->term_taxonomy ON($wpdb->term_relationships.term_taxonomy_id = $wpdb->term_taxonomy.term_taxonomy_id)
+		LEFT JOIN $wpdb->terms ON($wpdb->term_taxonomy.term_id = $wpdb->terms.term_id)
+		WHERE post_status = 'publish'
+		AND $wpdb->terms.name = '".$cat_name."'
+		AND $wpdb->term_taxonomy.taxonomy = 'category'
+		AND post_type = 'post' 
+ 		AND post_title not regexp '".$excluded_posts."'
+		ORDER BY post_date DESC LIMIT 100 OFFSET $offset
+		";
+	
+	$posts_in_category = $wpdb->get_results($sql, OBJECT);
+?>
+<?php endwhile;?>
+<footer class="footer">
+<p><?php _e('Article printed from', 'wp-print'); ?> <?php bloginfo('name'); ?>: <strong dir="ltr"><?php bloginfo('url'); ?></strong></p>
+<p><?php _e('URL to category', 'wp-print'); ?>: <strong dir="ltr"><?php echo (get_category_link($cat)); ?></strong></p>			
+<p style="text-align: <?php echo ('rtl' == $text_direction) ? 'left' : 'right'; ?>;" id="print-link">
+        <a href="#Print" onclick="window.print(); return false;" title="<?php _e('Click here to print.', 'wp-print'); ?>">
+                <?php _e('Click', 'wp-print'); ?> 
+                <?php _e('here', 'wp-print'); ?>
+                <?php _e('to print.', 'wp-print'); ?>
+        </a> 
+</p>
 <p style="text-align: center;"><?php echo stripslashes($print_options['disclaimer']); ?></p>
+</footer>
 </body>
 </html>
+
+<?php else: ?>
+<main role="main" class="center">
+
+	<?php if (have_posts()): ?>
+
+		<header class="entry-header">
+
+			<span class="hat">
+				<strong>
+					- <?php bloginfo('name'); ?> 
+					- 
+					<span dir="ltr"><?php bloginfo('url')?></span> 
+					-
+				</strong>
+			</span>
+			
+			<?php while (have_posts()): the_post(); ?>
+
+			<h1 class="entry-title">
+				<?php the_title(); ?>
+			</h1>
+
+			<span class="entry-date">
+
+				<?php _e('Posted By', 'wp-print'); ?> 
+
+				<cite><?php the_author(); ?></cite> 
+
+				<?php _e('On', 'wp-print'); ?> 
+
+				<time>	
+					<?php the_time(sprintf(__('%s @ %s', 'wp-print'), 
+						get_option('date_format'), 
+						get_option('time_format'))); 
+					?> 
+				</time>
+
+			  	<span>
+			  		<?php _e('In', 'wp-print'); ?> 
+			  		<?php print_categories(); ?> | 
+			  	</span>	
+
+		  		<a href='#comments_controls'>
+		  			<?php print_comments_number(); ?>
+	  			</a>	  			
+
+				</span>
+			
+		</header>	
+
+		<div class="entry-content">
+
+			<?php print_content(); ?>
+
+		</div>
+
+	<?php endwhile; ?>
+	
+	<div class="comments">
+		<?php if(print_can('comments')): ?>
+			<?php comments_template(); ?>
+		<?php endif; ?>
+	</div>
+	
+	<footer class="footer">
+		<p>
+			<?php _e('Article printed from', 'wp-print'); ?> 
+			<?php bloginfo('name'); ?>: 
+
+			<strong dir="ltr">
+				<?php bloginfo('url'); ?>
+			</strong>
+		</p>
+
+		<p>
+			<?php _e('URL to article', 'wp-print'); ?>: 
+			<strong dir="ltr">
+				<?php the_permalink(); ?>
+			</strong>
+		</p>
+		
+		<?php if(print_can('links')): ?>
+			<p><?php print_links(); ?></p>
+		<?php endif; ?>
+
+		<p style="text-align: <?php echo ('rtl' == $text_direction) ? 'left' : 'right'; ?>;" id="print-link">
+			<a href="#Print" onclick="window.print(); return false;" title="<?php _e('Click here to print.', 'wp-print'); ?>">
+				<?php _e('Click', 'wp-print'); ?> 
+				<?php _e('here', 'wp-print'); ?>
+				<?php _e('to print.', 'wp-print'); ?>
+			</a> 
+		</p>
+
+		<?php else: ?>
+			<p>
+				<?php _e('No posts matched your criteria.', 'wp-print'); ?>
+			</p>
+		<?php endif; ?>
+
+		<p style="text-align: center;">
+			<?php echo stripslashes($print_options['disclaimer']); ?>
+		</p>
+	</footer>
+
+</main>
+</body>
+</html>
+<?php endif; ?>
