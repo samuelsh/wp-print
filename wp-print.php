@@ -188,6 +188,11 @@ function print_content($display = true) {
 		add_shortcode('print_link', 'print_link_shortcode2');
 		$content = apply_filters('the_content', $content);
 		$content = str_replace(']]>', ']]&gt;', $content);
+		
+		// BB Dev -- removig custom HTML pattern from post
+		if(trim(get_option('custom_exclude_pattern')))
+			$content = preg_replace('/'.addslashes(get_option('custom_exclude_pattern')).'/', '', $content);
+		
 		if(!print_can('images')) {
 			$content = remove_image($content);
 		}
@@ -435,10 +440,11 @@ function print_activation( $network_wide )
 		, 'links'         => 1
 		, 'images'        => 1
 		, 'videos'        => 0
-		, 'cats'		  => 0
-		, 'exclude_posts' => ''
+		, 'cats'		  => 0 // BB Dev 
+		, 'exclude_posts' => '' // BB  Dev
+		, 'custom_exclude_pattern' => '' // BB Dev
 		, 'disclaimer'  => sprintf(__('Copyright &copy; %s %s. All rights reserved.', 'wp-print'), date('Y'), get_option('blogname'))
-		, 'export' 		=> 'disk'
+		, 'export' 		=> 'disk' // BB Dev
 	);
 
 	if ( is_multisite() && $network_wide )

@@ -65,6 +65,18 @@ if($cat):
  		AND post_title not regexp '".$excluded_posts."'
 		ORDER BY post_date DESC LIMIT 100 OFFSET $offset
 		";
+
+	$sql = $wpdb->prepare("SELECT * 
+		FROM $wpdb->posts
+		LEFT JOIN $wpdb->term_relationships ON($wpdb->posts.ID = $wpdb->term_relationships.object_id)
+		LEFT JOIN $wpdb->term_taxonomy ON($wpdb->term_relationships.term_taxonomy_id = $wpdb->term_taxonomy.term_taxonomy_id)
+		LEFT JOIN $wpdb->terms ON($wpdb->term_taxonomy.term_id = $wpdb->terms.term_id)
+		WHERE post_status = 'publish'
+		AND $wpdb->terms.name = '%s'
+		AND $wpdb->term_taxonomy.taxonomy = 'category'
+		AND post_type = 'post' 
+ 		AND post_title not regexp '%s'
+		ORDER BY post_date DESC LIMIT 100 OFFSET %d", $cat_name, $excluded_posts, $offset);
 	
 	$posts_in_category = $wpdb->get_results($sql, OBJECT);
 	?>

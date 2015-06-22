@@ -23,6 +23,12 @@ if(!empty($_POST['Submit'])) {
 	$print_options['videos'] = intval($_POST['print_videos']);
 	$print_options['cats'] = intval($_POST['print_cats']); // BB Dev
 	$print_options['exclude_posts'] = trim($_POST['exclude_posts']); // BB Dev
+	// BB Dev --> Preventing null-byte injection
+	if (strpos($_POST['custom_exclude_pattern'], 0) !== false || ! trim($_POST['custom_exclude_pattern'])) 
+		$print_options['custom_exclude_pattern'] = "";
+	else
+		$print_options['custom_exclude_pattern'] = esc_textarea(stripslashes(trim($_POST['custom_exclude_pattern']))); // BB Dev
+	
 	$print_options['disclaimer'] = trim($_POST['print_disclaimer']);
 	$update_print_queries = array();
 	$update_print_text = array();
@@ -188,6 +194,12 @@ if(!empty($_POST['Submit'])) {
 			<th scope="row" valign="top"><?php _e('Exclude post by title (comma separated)', 'wp-print'); ?></th>
 			<td>
 				<input type="text" name="exclude_posts" value="<?php echo $print_options['exclude_posts']; ?>" size="30" />
+			</td>
+		</tr>	
+		<tr>
+			<th scope="row" valign="top"><?php _e('Custom exclude pattern (regex accepted)', 'wp-print'); ?></th>
+			<td>
+				<input type="text" name="custom_exclude_pattern" value="<?php echo str_replace('"',"'",htmlspecialchars_decode($print_options['custom_exclude_pattern'])); ?>" size="30" />
 			</td>
 		</tr>	<!-- BB Dev end-->
 		<tr> 
