@@ -11,6 +11,11 @@
  * - Printer Friendly Post/Page Template
  * - wp-content/plugins/wp-print/print-posts.php
 */
+
+// including PHPWord library
+require_once plugin_dir_path(__FILE__).'/PHPWord/src/PhpWord/Autoloader.php';
+\PhpOffice\PhpWord\Autoloader::register();
+
 //BB Dev: accessing wp global variables in order to use them in a plugin
 global $wp_query;
 global $wpdb;
@@ -50,9 +55,13 @@ if($cat):
 	$postsInCat = get_term_by('name',get_cat_name($cat),'category'); // getting # of posts in category
 	$posts_num = $postsInCat->count;
 	$cat_name = get_cat_name($cat);
+	$phpWord_allowed_tags = array('p' => array(), 'h1' => array(), 'h2' => array(), 'h3' => array(),
+			 'h4' => array(), 'h5' => array(), 'h6' => array(), 'strong' => array(),
+			 'em' => array(), 'sup' => array(),'sub' => array(), 'table' => array(), 'tr' => array(),
+			 'td' => array(), 'ul' => array(), 'ol' => array(), 'li' => array(), 'textarea' => array());
 	echo $posts_num;
 	
-	$sql = "
+	/*$sql = "
 		SELECT * 
 		FROM $wpdb->posts
 		LEFT JOIN $wpdb->term_relationships ON($wpdb->posts.ID = $wpdb->term_relationships.object_id)
@@ -64,7 +73,7 @@ if($cat):
 		AND post_type = 'post' 
  		AND post_title not regexp '".$excluded_posts."'
 		ORDER BY post_date DESC LIMIT 100 OFFSET $offset
-		";
+		";*/
 
 	$sql = $wpdb->prepare("SELECT * 
 		FROM $wpdb->posts
@@ -79,6 +88,89 @@ if($cat):
 		ORDER BY post_date DESC LIMIT 100 OFFSET %d", $cat_name, $excluded_posts, $offset);
 	
 	$posts_in_category = $wpdb->get_results($sql, OBJECT);
+	
+	
+	if($print_options['write_to_file']) {
+        // Creating the new document...
+        $phpWord = new \PhpOffice\PhpWord\PhpWord();
+		
+        $section = $phpWord->addSection();
+  
+        $section->addText(htmlspecialchars('- '.get_bloginfo('name').' - '.get_bloginfo('url')), 
+        		array('size' => 11, 'bold' => true, 'name' => 'Veranda'), array('align' => 'center'));
+        
+        // Add hyperlink elements
+        /*$section->addLink(
+        		get_bloginfo('url'),
+        		htmlspecialchars(get_bloginfo('url')),
+        		array('color' => '0000FF', 'underline' => \PhpOffice\PhpWord\Style\Font::UNDERLINE_SINGLE,'pStyle')
+        );*/
+        
+        
+        $section->addText(htmlspecialchars(get_the_category_by_ID($cat)), 
+        		array('size' => 14, 'bold' => true, 'name' => 'Veranda'), array('align' => 'center'));
+        $section->addTextBreak(2);
+        
+		while($posts_in_category) {
+
+			if($posts_in_category) {
+				global $post;
+				
+				foreach ($posts_in_category as $post) {
+					
+					setup_postdata($post);
+					
+					$section->addLink(get_the_permalink(),htmlspecialchars(get_the_title()),
+							array('size' => 14, 'bold' => true, 'name' => 'Veranda'), array('align' => 'left')  );
+					
+					$textrun = $section->addTextRun(array('align' => 'left'));
+					$textrun->addText(htmlspecialchars("Posted by "),array('size' => 12, 'bold' => false, 'name' => 'Veranda'));
+					$textrun->addText(htmlspecialchars(get_the_author()), array('size' => 12, 'italic' => true, 'name' => 'Veranda'));
+					$textrun->addText(htmlspecialchars(" On ".get_the_time(sprintf(__('%s @ %s', 'wp-print'), get_option('date_format'), 
+						get_option('time_format')))." In ".get_the_category_by_ID($cat)." | ". print_comments_number(false)),
+							array('size' => 12, 'bold' => false, 'name' => 'Veranda'), 
+							array('align' => 'left'));
+					$section->addTextBreak(1, null, array('borderBottomSize' => 1,
+							'borderColor' => '000000'));
+						
+					//$section->addText(htmlspecialchars(print_content(false)),array('size' => 14, 'bold' => false, 'name' => 'Veranda'));
+					\PhpOffice\PhpWord\Shared\Html::addHtml($section, balanceTags(wp_kses(print_content(false), 
+							$phpWord_allowed_tags), true));
+					$section->addTextBreak(2);
+				}
+			}
+			$offset += 100;
+			$sql = $wpdb->prepare("SELECT *
+					FROM $wpdb->posts
+					LEFT JOIN $wpdb->term_relationships ON($wpdb->posts.ID = $wpdb->term_relationships.object_id)
+					LEFT JOIN $wpdb->term_taxonomy ON($wpdb->term_relationships.term_taxonomy_id = $wpdb->term_taxonomy.term_taxonomy_id)
+					LEFT JOIN $wpdb->terms ON($wpdb->term_taxonomy.term_id = $wpdb->terms.term_id)
+					WHERE post_status = 'publish'
+					AND $wpdb->terms.name = '%s'
+					AND $wpdb->term_taxonomy.taxonomy = 'category'
+					AND post_type = 'post'
+					AND post_title not regexp '%s'
+					ORDER BY post_date DESC LIMIT 100 OFFSET %d", $cat_name, $excluded_posts, $offset);
+			$posts_in_category = $wpdb->get_results($sql, OBJECT);
+		}	
+        
+		$phpWord->save(wp_upload_dir()['basedir'].'/test.docx', 'Word2007');
+	}
+	$offset = 0;
+	$sql = $wpdb->prepare("SELECT * 
+		FROM $wpdb->posts
+		LEFT JOIN $wpdb->term_relationships ON($wpdb->posts.ID = $wpdb->term_relationships.object_id)
+		LEFT JOIN $wpdb->term_taxonomy ON($wpdb->term_relationships.term_taxonomy_id = $wpdb->term_taxonomy.term_taxonomy_id)
+		LEFT JOIN $wpdb->terms ON($wpdb->term_taxonomy.term_id = $wpdb->terms.term_id)
+		WHERE post_status = 'publish'
+		AND $wpdb->terms.name = '%s'
+		AND $wpdb->term_taxonomy.taxonomy = 'category'
+		AND post_type = 'post' 
+ 		AND post_title not regexp '%s'
+		ORDER BY post_date DESC LIMIT 100 OFFSET %d", $cat_name, $excluded_posts, $offset);
+	
+	$posts_in_category = $wpdb->get_results($sql, OBJECT);
+	
 	?>
 
 <main role="main" class="center">
@@ -145,7 +237,7 @@ if($cat):
 </div>
 <?php $offset += 100; 
 
-	$sql = "
+	/*$sql = "
 		SELECT * 
 		FROM $wpdb->posts
 		LEFT JOIN $wpdb->term_relationships ON($wpdb->posts.ID = $wpdb->term_relationships.object_id)
@@ -157,8 +249,19 @@ if($cat):
 		AND post_type = 'post' 
  		AND post_title not regexp '".$excluded_posts."'
 		ORDER BY post_date DESC LIMIT 100 OFFSET $offset
-		";
+		";*/
 	
+	$sql = $wpdb->prepare("SELECT * 
+		FROM $wpdb->posts
+		LEFT JOIN $wpdb->term_relationships ON($wpdb->posts.ID = $wpdb->term_relationships.object_id)
+		LEFT JOIN $wpdb->term_taxonomy ON($wpdb->term_relationships.term_taxonomy_id = $wpdb->term_taxonomy.term_taxonomy_id)
+		LEFT JOIN $wpdb->terms ON($wpdb->term_taxonomy.term_id = $wpdb->terms.term_id)
+		WHERE post_status = 'publish'
+		AND $wpdb->terms.name = '%s'
+		AND $wpdb->term_taxonomy.taxonomy = 'category'
+		AND post_type = 'post' 
+ 		AND post_title not regexp '%s'
+		ORDER BY post_date DESC LIMIT 100 OFFSET %d", $cat_name, $excluded_posts, $offset);
 	$posts_in_category = $wpdb->get_results($sql, OBJECT);
 ?>
 <?php endwhile;?>

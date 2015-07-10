@@ -309,7 +309,7 @@ function print_comments_content($display = true) {
 
 
 ### Function: Print Comments
-function print_comments_number() {
+function print_comments_number($display=true) {
 	global $post;
 	$comment_text = '';
 	$comment_status = $post->comment_status;
@@ -323,10 +323,22 @@ function print_comments_number() {
 	} else {
 		$comment_text = __('Comments Disabled', 'wp-print');
 	}
-	if(post_password_required()) {
-		_e('Comments Hidden', 'wp-print');
-	} else {
-		echo $comment_text;
+	
+	if($display){
+        if(post_password_required()) {
+        	_e('Comments Hidden', 'wp-print');
+        } else {
+          	echo $comment_text;
+        }
+	}
+	
+	else {
+		
+        if(post_password_required()) {
+        	return __('Comments Hidden', 'wp-print');
+        } else {
+          	return $comment_text;
+        }
 	}
 }
 
@@ -444,7 +456,8 @@ function print_activation( $network_wide )
 		, 'exclude_posts' => '' // BB  Dev
 		, 'custom_exclude_pattern' => '' // BB Dev
 		, 'disclaimer'  => sprintf(__('Copyright &copy; %s %s. All rights reserved.', 'wp-print'), date('Y'), get_option('blogname'))
-		, 'export' 		=> 'disk' // BB Dev
+		, 'write_to_file' => 0 // BB Dev
+		, 'wp_print_is_activated' => 0 // Internal flag
 	);
 
 	if ( is_multisite() && $network_wide )
@@ -469,7 +482,6 @@ function print_activation( $network_wide )
 		print_activate();
 	}
 	
-//	test_WPFS() || wp_die(new WP_Error(1001,"Fatal Error - Failed to init Wordpress FS"), "", array('back_link' => true));
 	
 }
 

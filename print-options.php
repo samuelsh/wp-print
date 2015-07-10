@@ -29,6 +29,7 @@ if(!empty($_POST['Submit'])) {
 	else
 		$print_options['custom_exclude_pattern'] = esc_textarea(stripslashes(trim($_POST['custom_exclude_pattern']))); // BB Dev
 	
+	$print_options['write_to_file'] = intval($_POST['write_to_file']); // BB Dev
 	$print_options['disclaimer'] = trim($_POST['print_disclaimer']);
 	$update_print_queries = array();
 	$update_print_text = array();
@@ -201,7 +202,16 @@ if(!empty($_POST['Submit'])) {
 			<td>
 				<input type="text" name="custom_exclude_pattern" value="<?php echo str_replace('"',"'",htmlspecialchars_decode($print_options['custom_exclude_pattern'])); ?>" size="30" />
 			</td>
-		</tr>	<!-- BB Dev end-->
+		</tr>			
+		<tr> 
+			<th scope="row" valign="top"><?php _e('Enable export to DOC file', 'wp-print'); ?></th>
+			<td>
+				<select name="write_to_file" size="1">
+					<option value="1"<?php selected('1', $print_options['write_to_file']); ?>><?php _e('Yes', 'wp-print'); ?></option>
+					<option value="0"<?php selected('0', $print_options['write_to_file']); ?>><?php _e('No', 'wp-print'); ?></option>
+				</select>
+			</td> 
+		</tr> <!-- BB Dev end-->
 		<tr> 
 			<th scope="row" valign="top">				
 				<?php _e('Disclaimer/Copyright Text?', 'wp-print'); ?>
