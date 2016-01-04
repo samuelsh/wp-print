@@ -13,7 +13,7 @@
 */
 
 // including PHPWord library
-require_once plugin_dir_path(__FILE__).'/PHPWord/src/PhpWord/Autoloader.php';
+require_once plugin_dir_path(__FILE__).'/vendor/phpoffice/phpword/src/PhpWord/Autoloader.php';
 \PhpOffice\PhpWord\Autoloader::register();
 
 //BB Dev: accessing wp global variables in order to use them in a plugin
@@ -61,20 +61,6 @@ if($cat):
 			 'td' => array(), 'ul' => array(), 'ol' => array(), 'li' => array(), 'textarea' => array());
 	echo $posts_num;
 	
-	/*$sql = "
-		SELECT * 
-		FROM $wpdb->posts
-		LEFT JOIN $wpdb->term_relationships ON($wpdb->posts.ID = $wpdb->term_relationships.object_id)
-		LEFT JOIN $wpdb->term_taxonomy ON($wpdb->term_relationships.term_taxonomy_id = $wpdb->term_taxonomy.term_taxonomy_id)
-		LEFT JOIN $wpdb->terms ON($wpdb->term_taxonomy.term_id = $wpdb->terms.term_id)
-		WHERE post_status = 'publish'
-		AND $wpdb->terms.name = '".$cat_name."'
-		AND $wpdb->term_taxonomy.taxonomy = 'category'
-		AND post_type = 'post' 
- 		AND post_title not regexp '".$excluded_posts."'
-		ORDER BY post_date DESC LIMIT 100 OFFSET $offset
-		";*/
-
 	$sql = $wpdb->prepare("SELECT * 
 		FROM $wpdb->posts
 		LEFT JOIN $wpdb->term_relationships ON($wpdb->posts.ID = $wpdb->term_relationships.object_id)
@@ -237,20 +223,6 @@ if($cat):
 </div>
 <?php $offset += 100; 
 
-	/*$sql = "
-		SELECT * 
-		FROM $wpdb->posts
-		LEFT JOIN $wpdb->term_relationships ON($wpdb->posts.ID = $wpdb->term_relationships.object_id)
-		LEFT JOIN $wpdb->term_taxonomy ON($wpdb->term_relationships.term_taxonomy_id = $wpdb->term_taxonomy.term_taxonomy_id)
-		LEFT JOIN $wpdb->terms ON($wpdb->term_taxonomy.term_id = $wpdb->terms.term_id)
-		WHERE post_status = 'publish'
-		AND $wpdb->terms.name = '".$cat_name."'
-		AND $wpdb->term_taxonomy.taxonomy = 'category'
-		AND post_type = 'post' 
- 		AND post_title not regexp '".$excluded_posts."'
-		ORDER BY post_date DESC LIMIT 100 OFFSET $offset
-		";*/
-	
 	$sql = $wpdb->prepare("SELECT * 
 		FROM $wpdb->posts
 		LEFT JOIN $wpdb->term_relationships ON($wpdb->posts.ID = $wpdb->term_relationships.object_id)
